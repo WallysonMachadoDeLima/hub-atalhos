@@ -1,0 +1,25 @@
+{
+  "name": "hub-atalhos-proxy",
+  "version": "2.0",
+  "description": "Proxy Reverso para acessar sites bloqueados em iframe",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "install-deps": "npm install express axios cheerio cors",
+    "setup": "npm run install-deps && echo '✅ Pronto! Execute: npm start'"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "express": "^4.22.1"
+  },
+  "keywords": [
+    "proxy",
+    "iframe",
+    "bypass",
+    "cors"
+  ],
+  "author": "Wallyson",
+  "license": "MIT"
+}
