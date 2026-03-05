@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Hub de Atalhos - Permitir Iframe",
-  "version": "1.0",
-  "description": "Permite que sites abram em iframe no Hub de Atalhos, removendo bloqueios X-Frame-Options",
+  "name": "Hub de Atalhos - Desbloqueador Ultra",
+  "version": "2.0",
+  "description": "Remove TODAS as proteções contra iframe (CSP, X-Frame-Options, CORP, COEP, COOP, etc.)",
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
-    "activeTab"
+    "scripting",
+    "activeTab",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -25,5 +27,19 @@
       "16": "icon16.png",
       "48": "icon48.png"
     }
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "all_frames": true,
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
