@@ -6,12 +6,53 @@ class HubAtalhos {
         this.iframes = new Map(); // Cache de iframes
         this.currentLinkId = null;
         this.init();
+        
+        // Configuração do Proxy
+        this.PROXY_URL = 'http://5.189.139.117:3456/proxy?url=';
+        
+        // Lista de sites conhecidos por bloquearem iframe
+        this.BLOCKED_SITES = [
+            'instagram.com',
+            'facebook.com',
+            'fb.com',
+            'twitter.com',
+            'x.com',
+            'tiktok.com',
+            'netflix.com',
+            'primevideo.com',
+            'disneyplus.com',
+            'hbomax.com',
+            'spotify.com',
+            'youtube.com',
+            'youtu.be',
+            'google.com',
+            'linkedin.com'
+        ];
     }
 
     init() {
         this.renderSidebar();
         this.setupEventListeners();
         this.restoreLastSelected();
+    }
+
+    // Verifica se URL precisa de proxy
+    needsProxy(url) {
+        try {
+            const hostname = new URL(url).hostname.toLowerCase();
+            return this.BLOCKED_SITES.some(site => hostname.includes(site));
+        } catch {
+            return false;
+        }
+    }
+
+    // Gera URL do proxy
+    getProxiedUrl(url) {
+        if (this.needsProxy(url)) {
+            console.log(`🔓 Usando proxy para: ${url}`);
+            return this.PROXY_URL + encodeURIComponent(url);
+        }
+        return url;
     }
 
     // Storage
@@ -139,6 +180,10 @@ class HubAtalhos {
         const link = this.data.links.find(l => l.id === linkId);
         if (!link) return;
 
+        // Aplica proxy automaticamente se necessário
+        const originalUrl = link.url;
+        const proxiedUrl = this.getProxiedUrl(originalUrl);
+        
         // Atualiza UI
         this.currentLinkId = linkId;
         this.data.ui.selectedLinkId = linkId;
@@ -151,21 +196,22 @@ class HubAtalhos {
 
         // Atualiza breadcrumb
         const group = this.data.groups.find(g => g.id === link.groupId);
+        const proxyBadge = this.needsProxy(originalUrl) ? ' <span style="color: #f78166; font-size: 10px;">[PROXY]</span>' : '';
         document.getElementById('breadcrumb').innerHTML = `
             <span class="group-name">${group.name}</span>
             <span class="separator">/</span>
-            <span class="link-name">${link.name}</span>
+            <span class="link-name">${link.name}${proxyBadge}</span>
         `;
 
         // Habilita botões
         document.getElementById('btn-edit-link').disabled = false;
         document.getElementById('btn-delete-link').disabled = false;
 
-        // Gerencia iframe
-        this.showIframe(linkId, link.url);
+        // Gerencia iframe com URL do proxy
+        this.showIframe(linkId, proxiedUrl, originalUrl);
     }
 
-    showIframe(linkId, url) {
+    showIframe(linkId, url, originalUrl = null) {
         const container = document.getElementById('iframe-container');
 
         // Esconde todos os iframes
@@ -181,27 +227,53 @@ class HubAtalhos {
         let iframe = this.iframes.get(linkId);
 
         if (!iframe) {
+            // Mostra loading
+            this.showLoading();
+            
             // Cria novo iframe
             iframe = document.createElement('iframe');
             iframe.src = url;
             iframe.dataset.linkId = linkId;
+            iframe.dataset.originalUrl = originalUrl || url;
             
             // Handler para sites que bloqueiam iframe
+            let loadTimeout = setTimeout(() => {
+                // Se demorar muito, assume que está funcionando
+                this.hideLoading();
+            }, 5000);
+            
             iframe.addEventListener('load', () => {
+                clearTimeout(loadTimeout);
+                this.hideLoading();
+                
                 try {
                     // Tenta acessar contentDocument
                     const doc = iframe.contentDocument || iframe.contentWindow?.document;
-                    if (!doc || doc.body.innerHTML === '') {
-                        this.showBlockedFallback(linkId, url);
+                    if (!doc || doc.body?.innerHTML === '' || doc.body?.innerHTML?.includes(' refused to connect')) {
+                        // Se estiver vazio ou mostrar erro de conexão, tenta proxy
+                        if (!this.needsProxy(originalUrl || url)) {
+                            console.log('⚠️ Site bloqueou, tentando proxy...');
+                            const proxyUrl = this.PROXY_URL + encodeURIComponent(originalUrl || url);
+                            iframe.src = proxyUrl;
+                        }
                     }
                 } catch (e) {
-                    // Cross-origin bloqueado - site pode estar funcionando ou não
-                    // Vamos assumir que está ok, se houver erro real o usuário verá
+                    // Cross-origin é normal quando funciona
+                    console.log('✅ Iframe carregado (cross-origin)');
                 }
             });
 
             iframe.addEventListener('error', () => {
-                this.showBlockedFallback(linkId, url);
+                clearTimeout(loadTimeout);
+                this.hideLoading();
+                // Se erro e não está usando proxy, tenta com proxy
+                if (!this.needsProxy(originalUrl || url)) {
+                    console.log('⚠️ Erro no iframe, tentando proxy...');
+                    const proxyUrl = this.PROXY_URL + encodeURIComponent(originalUrl || url);
+                    iframe.src = proxyUrl;
+                } else {
+                    this.showBlockedFallback(linkId, originalUrl || url);
+                }
             });
 
             container.appendChild(iframe);
@@ -210,6 +282,28 @@ class HubAtalhos {
 
         // Mostra o iframe atual
         iframe.classList.remove('hidden');
+    }
+
+    showLoading() {
+        // Remove loading anterior se existir
+        const existing = document.querySelector('.iframe-loading');
+        if (existing) existing.remove();
+        
+        const container = document.getElementById('iframe-container');
+        const loading = document.createElement('div');
+        loading.className = 'iframe-loading';
+        loading.innerHTML = `
+            <div class="loading-spinner">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span>Carregando site...</span>
+            </div>
+        `;
+        container.appendChild(loading);
+    }
+
+    hideLoading() {
+        const loading = document.querySelector('.iframe-loading');
+        if (loading) loading.remove();
     }
 
     showBlockedFallback(linkId, url) {
