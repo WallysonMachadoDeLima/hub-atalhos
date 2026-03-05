@@ -8,7 +8,7 @@ class HubAtalhos {
         this.init();
         
         // Configuração do Proxy
-        this.PROXY_URL = 'http://5.189.139.117:3456/proxy?url=';
+        this.PROXY_URL = 'http://5.189.139.117/proxy?url=';
         
         // Lista de sites conhecidos por bloquearem iframe
         this.BLOCKED_SITES = [
