@@ -31,9 +31,14 @@ class HubAtalhos {
     }
 
     init() {
+        this.popups = {}; // Guarda referências dos popups
         this.renderSidebar();
         this.setupEventListeners();
         this.restoreLastSelected();
+        
+        // Expõe funções globais para os botões do popup
+        window.focusPopup = (linkId) => this.focusPopup(linkId);
+        window.closePopup = (linkId) => this.closePopup(linkId);
     }
 
     // Verifica se URL precisa de proxy
@@ -326,22 +331,81 @@ class HubAtalhos {
         const iframe = this.iframes.get(linkId);
         if (iframe) iframe.classList.add('hidden');
 
-        // Verifica se já tem fallback
-        let fallback = container.querySelector(`[data-fallback="${linkId}"]`);
-        if (fallback) {
-            fallback.classList.remove('hidden');
-            return;
-        }
-
-        // Cria fallback
-        const template = document.getElementById('template-blocked');
-        fallback = template.content.cloneNode(true).firstElementChild;
-        fallback.dataset.fallback = linkId;
+        // Abre popup ao invés de mostrar fallback estático
+        this.openPopupWindow(url, linkId);
+    }
+    
+    openPopupWindow(url, linkId) {
+        const width = Math.min(1200, screen.width * 0.9);
+        const height = Math.min(800, screen.height * 0.9);
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
         
-        const btn = fallback.querySelector('.btn-external');
-        btn.href = url;
-
-        container.appendChild(fallback);
+        const features = `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes,location=yes,menubar=yes,toolbar=yes`;
+        
+        console.log('🪟 Abrindo popup:', url);
+        const popup = window.open(url, `popup_${linkId}`, features);
+        
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+            // Popup bloqueado, mostra mensagem
+            this.showPopupBlockedMessage(url);
+        } else {
+            // Popup aberto com sucesso
+            this.showPopupActiveMessage(linkId, popup);
+        }
+    }
+    
+    showPopupActiveMessage(linkId, popup) {
+        const container = document.getElementById('iframe-container');
+        container.innerHTML = `
+            <div class="popup-active-message">
+                <i class="fas fa-window-restore"></i>
+                <h3>Site aberto em janela popup</h3>
+                <p>O site está aberto em uma janela separada.</p>
+                <div class="popup-actions">
+                    <button class="btn-primary" onclick="window.focusPopup('${linkId}')">
+                        <i class="fas fa-bring-front"></i> Trazer para frente
+                    </button>
+                    <button class="btn-secondary" onclick="window.closePopup('${linkId}')">
+                        <i class="fas fa-times"></i> Fechar janela
+                    </button>
+                </div>
+                <p class="hint">Você pode continuar usando o Hub normalmente.</p>
+            </div>
+        `;
+        
+        // Guarda referência do popup
+        this.popups = this.popups || {};
+        this.popups[linkId] = popup;
+    }
+    
+    showPopupBlockedMessage(url) {
+        const container = document.getElementById('iframe-container');
+        container.innerHTML = `
+            <div class="popup-blocked-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Popup bloqueado pelo navegador</h3>
+                <p>Seu navegador bloqueou a janela popup. Clique abaixo para abrir:</p>
+                <a href="${url}" target="_blank" class="btn-primary">
+                    <i class="fas fa-external-link-alt"></i> Abrir em nova aba
+                </a>
+                <p class="hint">💡 Dica: Permita popups para este site nas configurações do navegador</p>
+            </div>
+        `;
+    }
+    
+    focusPopup(linkId) {
+        if (this.popups && this.popups[linkId]) {
+            this.popups[linkId].focus();
+        }
+    }
+    
+    closePopup(linkId) {
+        if (this.popups && this.popups[linkId]) {
+            this.popups[linkId].close();
+            delete this.popups[linkId];
+            this.showIframe(this.currentLinkId, this.data.links.find(l => l.id === this.currentLinkId)?.url);
+        }
     }
 
     // CRUD Groups
