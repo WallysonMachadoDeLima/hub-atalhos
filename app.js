@@ -192,35 +192,68 @@ class HubAtalhos {
         const link = this.data.links.find(l => l.id === linkId);
         if (!link) return;
 
-        // Aplica proxy automaticamente se necessário
         const originalUrl = link.url;
-        const proxiedUrl = this.getProxiedUrl(originalUrl);
         
-        // Atualiza UI
-        this.currentLinkId = linkId;
-        this.data.ui.selectedLinkId = linkId;
-        this.saveData();
-
-        // Atualiza sidebar
-        document.querySelectorAll('.link-item').forEach(el => {
-            el.classList.toggle('active', el.dataset.linkId === linkId);
-        });
-
-        // Atualiza breadcrumb
-        const group = this.data.groups.find(g => g.id === link.groupId);
-        const proxyBadge = this.needsProxy(originalUrl) ? ' <span style="color: #f78166; font-size: 10px;">[PROXY]</span>' : '';
-        document.getElementById('breadcrumb').innerHTML = `
-            <span class="group-name">${group.name}</span>
-            <span class="separator">/</span>
-            <span class="link-name">${link.name}${proxyBadge}</span>
-        `;
-
-        // Habilita botões
-        document.getElementById('btn-edit-link').disabled = false;
-        document.getElementById('btn-delete-link').disabled = false;
-
-        // Gerencia iframe com URL do proxy
-        this.showIframe(linkId, proxiedUrl, originalUrl);
+        // SE FOR SITE BLOQUEADO, ABRE POPUP IMEDIATAMENTE (sem tentar iframe)
+        if (this.needsPopup(originalUrl)) {
+            console.log('🚫 Site bloqueado detectado, abrindo popup:', originalUrl);
+            this.currentLinkId = linkId;
+            this.data.ui.selectedLinkId = linkId;
+            this.saveData();
+            
+            // Atualiza UI
+            document.querySelectorAll('.link-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.linkId === linkId);
+            });
+            
+            const group = this.data.groups.find(g => g.id === link.groupId);
+            document.getElementById('breadcrumb').innerHTML = `
+                <span class="group-name">${group.name}</span>
+                <span class="separator">/</span>
+                <span class="link-name">${link.name} <span style="color: #f78166; font-size: 10px;">[POPUP]</span></span>
+            `;
+            
+            document.getElementById('btn-edit-link').disabled = false;
+            document.getElementById('btn-delete-link').disabled = false;
+            
+            // ABRE POPUP DIRETO
+            this.openPopupWindow(originalUrl, linkId);
+            return;
+        }
+        
+        // Se não for bloqueado, usa iframe normalmente
+        this.showIframe(linkId, originalUrl, originalUrl);
+    }
+    
+    // Lista de sites que PRECISAM de popup (não funcionam em iframe nunca)
+    needsPopup(url) {
+        const blockedDomains = [
+            'instagram.com',
+            'facebook.com', 
+            'fb.com',
+            'twitter.com',
+            'x.com',
+            'tiktok.com',
+            'netflix.com',
+            'primevideo.com',
+            'disneyplus.com',
+            'hbomax.com',
+            'spotify.com',
+            'youtube.com',
+            'youtu.be',
+            'google.com',
+            'gmail.com',
+            'linkedin.com',
+            'whatsapp.com',
+            'web.whatsapp.com'
+        ];
+        
+        try {
+            const hostname = new URL(url).hostname.toLowerCase();
+            return blockedDomains.some(domain => hostname.includes(domain));
+        } catch {
+            return false;
+        }
     }
 
     showIframe(linkId, url, originalUrl = null) {
