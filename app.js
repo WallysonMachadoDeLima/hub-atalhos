@@ -174,11 +174,13 @@ class HubAtalhos {
 
         const faviconUrl = this.getFavicon(link.url);
         const domain = new URL(link.url).hostname;
+        const needsPopup = this.needsPopup(link.url);
+        const popupIcon = needsPopup ? '<i class="fas fa-external-link-alt" style="color: #f78166; font-size: 10px; margin-left: 5px;"></i>' : '';
 
         el.innerHTML = `
             <img src="${faviconUrl}" class="link-icon" alt="" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22%3E%3Ctext y=%2215%22 font-size=%2215%22%3E🔗%3C/text%3E%3C/svg%3E'">
             <div class="link-info">
-                <div class="link-name">${link.name}</div>
+                <div class="link-name">${link.name}${popupIcon}</div>
                 <div class="link-url">${domain}</div>
             </div>
         `;
