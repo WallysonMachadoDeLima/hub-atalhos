@@ -7,8 +7,9 @@ class HubAtalhos {
         this.currentLinkId = null;
         this.init();
         
-        // Configuração do Proxy
+        // Configuração do Proxy e Streaming
         this.PROXY_URL = 'http://5.189.139.117/proxy?url=';
+        this.STREAMING_URL = 'http://5.189.139.117:3001/stream?url='; // NOVO!
         
         // Lista de sites conhecidos por bloquearem iframe
         this.BLOCKED_SITES = [
@@ -174,13 +175,13 @@ class HubAtalhos {
 
         const faviconUrl = this.getFavicon(link.url);
         const domain = new URL(link.url).hostname;
-        const needsPopup = this.needsPopup(link.url);
-        const popupIcon = needsPopup ? '<i class="fas fa-external-link-alt" style="color: #f78166; font-size: 10px; margin-left: 5px;"></i>' : '';
+        const needsStreaming = this.needsPopup(link.url);
+        const streamIcon = needsStreaming ? '<i class="fas fa-video" style="color: #f78166; font-size: 10px; margin-left: 5px;" title="Streaming"></i>' : '';
 
         el.innerHTML = `
             <img src="${faviconUrl}" class="link-icon" alt="" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22%3E%3Ctext y=%2215%22 font-size=%2215%22%3E🔗%3C/text%3E%3C/svg%3E'">
             <div class="link-info">
-                <div class="link-name">${link.name}${popupIcon}</div>
+                <div class="link-name">${link.name}${streamIcon}</div>
                 <div class="link-url">${domain}</div>
             </div>
         `;
@@ -196,30 +197,16 @@ class HubAtalhos {
 
         const originalUrl = link.url;
         
-        // SE FOR SITE BLOQUEADO, ABRE POPUP IMEDIATAMENTE (sem tentar iframe)
+        // SE FOR SITE BLOQUEADO, REDIRECIONA PARA STREAMING
         if (this.needsPopup(originalUrl)) {
-            console.log('🚫 Site bloqueado detectado, abrindo popup:', originalUrl);
-            this.currentLinkId = linkId;
-            this.data.ui.selectedLinkId = linkId;
-            this.saveData();
+            console.log('🎬 Redirecionando para streaming:', originalUrl);
             
-            // Atualiza UI
-            document.querySelectorAll('.link-item').forEach(el => {
-                el.classList.toggle('active', el.dataset.linkId === linkId);
-            });
+            // Abre streaming em nova aba
+            const streamingUrl = this.STREAMING_URL + encodeURIComponent(originalUrl);
+            window.open(streamingUrl, '_blank');
             
-            const group = this.data.groups.find(g => g.id === link.groupId);
-            document.getElementById('breadcrumb').innerHTML = `
-                <span class="group-name">${group.name}</span>
-                <span class="separator">/</span>
-                <span class="link-name">${link.name} <span style="color: #f78166; font-size: 10px;">[POPUP]</span></span>
-            `;
-            
-            document.getElementById('btn-edit-link').disabled = false;
-            document.getElementById('btn-delete-link').disabled = false;
-            
-            // ABRE POPUP DIRETO
-            this.openPopupWindow(originalUrl, linkId);
+            // Mostra mensagem no Hub
+            this.showStreamingMessage(linkId, originalUrl);
             return;
         }
         
@@ -227,7 +214,25 @@ class HubAtalhos {
         this.showIframe(linkId, originalUrl, originalUrl);
     }
     
-    // Lista de sites que PRECISAM de popup (não funcionam em iframe nunca)
+    showStreamingMessage(linkId, url) {
+        const container = document.getElementById('iframe-container');
+        container.innerHTML = `
+            <div class="streaming-message">
+                <i class="fas fa-video"></i>
+                <h3>🎬 Site aberto em Streaming</h3>
+                <p>O site está sendo executado no servidor em uma nova aba.</p>
+                <p class="url">${url}</p>
+                <div class="actions">
+                    <button class="btn-primary" onclick="window.open('${this.STREAMING_URL + encodeURIComponent(url)}', '_blank')">
+                        <i class="fas fa-external-link-alt"></i> Abrir Streaming
+                    </button>
+                </div>
+                <p class="hint">💡 O Chrome está rodando no servidor e transmitindo a tela para você!</p>
+            </div>
+        `;
+    }
+    
+    // Lista de sites que usam STREAMING (Chrome no servidor)
     needsPopup(url) {
         const blockedDomains = [
             'instagram.com',

@@ -662,3 +662,58 @@ body {
     color: var(--text-muted);
     margin-top: 16px;
 }
+
+/* Streaming message */
+.streaming-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 50px 70px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-elevated);
+    max-width: 600px;
+}
+
+.streaming-message i {
+    font-size: 56px;
+    color: var(--accent);
+    margin-bottom: 20px;
+}
+
+.streaming-message h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: var(--accent);
+}
+
+.streaming-message p {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-size: 15px;
+}
+
+.streaming-message .url {
+    background: var(--bg-secondary);
+    padding: 10px 15px;
+    border-radius: var(--radius-md);
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    word-break: break-all;
+    margin: 20px 0;
+}
+
+.streaming-message .actions {
+    margin: 25px 0;
+}
+
+.streaming-message .btn-primary {
+    padding: 14px 28px;
+    font-size: 16px;
+}
