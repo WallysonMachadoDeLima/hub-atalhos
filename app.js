@@ -40,7 +40,12 @@ class HubAtalhos {
     needsProxy(url) {
         try {
             const hostname = new URL(url).hostname.toLowerCase();
-            return this.BLOCKED_SITES.some(site => hostname.includes(site));
+            // SEMPRE usar proxy para esses sites
+            const needsIt = this.BLOCKED_SITES.some(site => hostname.includes(site));
+            if (needsIt) {
+                console.log(`🔒 Site bloqueado detectado: ${hostname}`);
+            }
+            return needsIt;
         } catch {
             return false;
         }
@@ -50,7 +55,9 @@ class HubAtalhos {
     getProxiedUrl(url) {
         if (this.needsProxy(url)) {
             console.log(`🔓 Usando proxy para: ${url}`);
-            return this.PROXY_URL + encodeURIComponent(url);
+            // Adiciona timestamp para evitar cache
+            const cacheBuster = `&_t=${Date.now()}`;
+            return this.PROXY_URL + encodeURIComponent(url) + cacheBuster;
         }
         return url;
     }
@@ -235,6 +242,12 @@ class HubAtalhos {
             iframe.src = url;
             iframe.dataset.linkId = linkId;
             iframe.dataset.originalUrl = originalUrl || url;
+            
+            // PERMISSÕES MÁXIMAS para permitir qualquer site
+            iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-orientation-lock allow-pointer-lock allow-presentation allow-top-navigation');
+            iframe.setAttribute('allow', 'accelerometer; autoplay; camera; clipboard-write; encrypted-media; fullscreen; geolocation; gyroscope; microphone; midi; payment; picture-in-picture; usb; web-share; xr-spatial-tracking');
+            iframe.setAttribute('allowfullscreen', 'true');
+            iframe.setAttribute('loading', 'eager');
             
             // Handler para sites que bloqueiam iframe
             let loadTimeout = setTimeout(() => {
